@@ -1,0 +1,94 @@
+import codecademylib3_seaborn
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+import numpy as np
+import pandas as pd
+
+def assign_rarity(string):
+  if string == 'Mythic Rare':
+    return 4
+  elif string == 'Rare':
+    return 3
+  elif string == 'Common':
+    return 1
+  return 2
+
+data = pd.read_csv('historyOfSet.csv')
+rarities = data['rarity'].apply(lambda row: assign_rarity(row.strip()))
+rarities = np.array(rarities)
+#print(data.rarity)
+#print(rarities[13])
+print(data.head())
+#creatures = data[data['cardType'] == 'Creature']
+
+mana_1 = data['cardCmc'].str.split(' ')
+mana_1 = mana_1.fillna(0)
+mana_1 = np.array(mana_1)
+#print(len(mana_1))
+mana_2 = []
+#print(mana_1)
+for el in mana_1:
+  converted_mana_value = 0
+  if el != 0:
+    count = 0
+    for i in el:
+      if count == 0:
+        if (len(i) == 3) and (i[1] != 'W' and i[1] != 'U' and i[1] != 'B' and i[1] != 'R' and i[1] != 'G' and i[1] != 'X' and i[1] != 'C'):
+          converted_mana_value += int(i[1])
+        elif i[1] == 'X':
+          converted_mana_value += 0
+        elif (len(i) == 3):
+          converted_mana_value += 1
+        elif i[2] == '/':
+          converted_mana_value += 1
+        else:
+          converted_mana_value += 1
+      else:
+        converted_mana_value += 1
+      count += 1
+    converted_mana_value -= 1
+    
+  mana_2.append(converted_mana_value)
+#print(mana_2)
+
+
+key_values = {}
+count = 0
+for i in mana_2:
+  if i not in key_values.keys():
+    key_values[i] = []
+
+for i in mana_2:
+  key_values[i].append(rarities[count])
+  count += 1
+
+for key in key_values.keys():
+  key_values[key] = sum(key_values[key]) / len(key_values[key])
+
+#print(key_values)
+x_values = list(key_values.keys())
+y_values = list(key_values.values())
+
+plt.scatter(x_values, y_values)
+plt.xlabel('Converted mana cost')
+plt.ylabel('Rarity')
+plt.title('Rarity vs Converted mana cost')
+plt.show()
+
+train_cmc, test_cmc, train_rarity, test_rarity = train_test_split(np.array(x_values).reshape(-1, 1), np.array(y_values).reshape(-1, 1), train_size = 0.8, test_size = 0.2, random_state = 2)
+
+model = LinearRegression()
+model.fit(train_cmc, train_rarity)
+print(model.score(test_cmc, test_rarity))
+
+plt.clf()
+
+predicted_data = np.array(model.predict(test_cmc))
+plt.plot(np.array(test_rarity), predicted_data)
+plt.xlabel('Converted mana cost')
+plt.ylabel('Rarity')
+plt.title('Rarity vs predicted_rarity')
+
+plt.scatter(np.array(test_cmc), np.array(test_rarity), color = 'red')
+plt.show()
